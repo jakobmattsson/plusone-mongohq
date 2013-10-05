@@ -1,14 +1,3 @@
-#
-#
-#
-#   MAJOR LIMITATION AT THE MOMENT: databases created this way doesn't get any users, so there's no way to connect to them
-#                                   without first creating a user via the web gui (which defeats the entire purpose of this module)
-#
-#
-#
-
-
-
 request = require 'request'
 async = require 'async'
 
@@ -49,6 +38,17 @@ createDatabase = (apikey, name, slug, callback) ->
       slug: slug
   }, callback
 
+addUser = (apikey, database, username, password, callback) ->
+  query {
+    apikey
+    path: "databases/#{database}/users"
+    method: 'POST'
+    json:
+      user: username
+      password: password
+  }, callback
+
+
 deleteDatabase = (apikey, name, callback) ->
   query {
     apikey
@@ -72,31 +72,32 @@ exports.create = ({ apikey, username, password }) ->
     readableName = nowTime.getMinutes()
     name = prefix + '-' + now + '-' + readableName
 
-    createDatabase apikey, name, 'sandbox', propagate callback, (res) ->
-      listDatabases apikey, propagate callback, (dbs) ->
+    createDatabase apikey, name, 'sandbox', propagate callback, ->
+      addUser apikey, name, username, password, propagate callback, ->
+        listDatabases apikey, propagate callback, (dbs) ->
 
-        toPurge = dbs.filter (db) ->
-          [pre, timestamp] = db.name.split('-')
-          pre == prefix && parseInt(timestamp) < nowTime.getTime()
+          toPurge = dbs.filter (db) ->
+            [pre, timestamp] = db.name.split('-')
+            pre == prefix && parseInt(timestamp) < nowTime.getTime()
 
-        async.forEach toPurge, (db, callback) ->
-          deleteDatabase(apikey, db.name, callback)
-        , propagate callback, ->
+          async.forEach toPurge, (db, callback) ->
+            deleteDatabase(apikey, db.name, callback)
+          , propagate callback, ->
 
-          theOne = dbs.filter (x) -> x.name == name
+            theOne = dbs.filter (x) -> x.name == name
 
-          if theOne.length == 0
-            return callback(new Error("Could not find a database with the given name"))
-          if theOne.length > 1
-            return callback(new Error("Multiple databases found with the same name"))
+            if theOne.length == 0
+              return callback(new Error("Could not find a database with the given name"))
+            if theOne.length > 1
+              return callback(new Error("Multiple databases found with the same name"))
 
-          callback(null, {
-            host: theOne[0].hostname
-            port: theOne[0].port
-            username: username
-            password: password
-            database: name
-          })
+            callback(null, {
+              host: theOne[0].hostname
+              port: theOne[0].port
+              username: username
+              password: password
+              database: name
+            })
 
   destroyAll: (tag, callback) ->
     listDatabases apikey, propagate callback, (dbs) ->
