@@ -46,6 +46,7 @@ addUser = (apikey, database, username, password, callback) ->
     json:
       user: username
       password: password
+      readOnly: false
   }, callback
 
 
