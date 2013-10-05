@@ -1,3 +1,14 @@
+#
+#
+#
+#   MAJOR LIMITATION AT THE MOMENT: databases created this way doesn't get any users, so there's no way to connect to them
+#                                   without first creating a user via the web gui (which defeats the entire purpose of this module)
+#
+#
+#
+
+
+
 request = require 'request'
 async = require 'async'
 
@@ -84,6 +95,7 @@ exports.create = ({ apikey, username, password }) ->
             port: theOne[0].port
             username: username
             password: password
+            database: name
           })
 
   destroyAll: (tag, callback) ->
@@ -98,7 +110,7 @@ exports.create = ({ apikey, username, password }) ->
 
   destroy: (connData, callback) ->
     listDatabases apikey, propagate callback, (dbs) ->
-      matches = dbs.filter (db) -> db.port == connData.port && db.hostname == connData.host
+      matches = dbs.filter (db) -> db.port == connData.port && db.hostname == connData.host && db.name == connData.name
 
       if matches.length > 1
         return callback(new Error("Too many matches"))
